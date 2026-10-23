@@ -14,3 +14,10 @@
   every row uses one clock.
 - Left the check_results index out on purpose so Part 13 can measure the
   before/after difference.
+
+## Part 6 - users and API keys
+- Stored only a SHA-256 hash of each API key. SHA-256 is fine because keys are
+  long and random; slow hashes like bcrypt exist for guessable human passwords.
+- Used secrets (not random) to generate keys, since they must be unguessable.
+- Handled duplicate emails by catching the database's IntegrityError instead
+  of checking first, which avoids a race between two simultaneous signups.
