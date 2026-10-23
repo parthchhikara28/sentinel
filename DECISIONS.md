@@ -21,3 +21,12 @@
 - Used secrets (not random) to generate keys, since they must be unguessable.
 - Handled duplicate emails by catching the database's IntegrityError instead
   of checking first, which avoids a race between two simultaneous signups.
+
+## Part 7 - monitors API
+- Added an SSRF guard that resolves hostnames and rejects private addresses.
+  Known limit: it checks at creation time, so DNS rebinding is not covered.
+- Returned 404 (not 403) for other users' monitors so resource existence
+  is not leaked; ownership is filtered inside the SQL query.
+- Used cursor pagination (fetch limit+1) instead of OFFSET so deep pages stay
+  fast and inserts mid-pagination do not cause skips or duplicates.
+- DELETE is a soft delete (is_active=false) to keep check history.
