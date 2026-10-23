@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import users
+from app.api import monitors, users
 
 
 def create_app() -> FastAPI:
@@ -10,6 +10,7 @@ def create_app() -> FastAPI:
         description="Uptime monitoring and alerting API",
     )
     app.include_router(users.router)
+    app.include_router(monitors.router)
 
     @app.get("/health", tags=["ops"])
     async def health() -> dict[str, str]:
