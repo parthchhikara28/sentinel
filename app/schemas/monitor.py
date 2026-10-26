@@ -59,3 +59,13 @@ class CheckResultOut(BaseModel):
 class CheckResultPage(BaseModel):
     items: list[CheckResultOut]
     next_cursor: int | None
+
+
+class IncidentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    started_at: datetime
+    resolved_at: datetime | None
+    cause: str
+    alert_sent: bool

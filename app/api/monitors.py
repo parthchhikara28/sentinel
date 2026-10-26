@@ -5,10 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.urls import assert_public_url
 from app.db.base import get_session
-from app.db.models import CheckResult, Monitor, User
+from app.db.models import CheckResult, Incident, Monitor, User
 from app.schemas.monitor import (
     CheckResultOut,
     CheckResultPage,
+    IncidentOut,
     MonitorCreate,
     MonitorOut,
     MonitorPage,
@@ -140,3 +141,20 @@ async def list_checks(
         items=[CheckResultOut.model_validate(r) for r in rows],
         next_cursor=rows[-1].id if has_more and rows else None,
     )
+
+
+@router.get("/{monitor_id}/incidents", response_model=list[IncidentOut])
+async def list_incidents(
+    monitor_id: int,
+    limit: int = Query(default=20, ge=1, le=100),
+    user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[Incident]:
+    await _get_owned(monitor_id, user, session)
+    rows = await session.execute(
+        select(Incident)
+        .where(Incident.monitor_id == monitor_id)
+        .order_by(Incident.started_at.desc())
+        .limit(limit)
+    )
+    return list(rows.scalars())
