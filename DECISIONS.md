@@ -57,3 +57,15 @@
   answer and tolerates 30s of staleness. The cache key includes every input
   (monitor id and hours).
 - Reported p95 latency alongside the average because averages hide slow tails.
+
+## Part 11 - tests
+- Tests run against a real PostgreSQL (sentinel_test), not SQLite, because
+  SKIP LOCKED, percentile_disc and FILTER do not exist in SQLite; a different
+  database could let tests pass while production is broken.
+- Used create_all for the test schema (fast) while CI separately runs
+  alembic upgrade head so the real migrations are still verified.
+- Mocked the webhook sender in alert tests so they assert on "how many alerts
+  were sent" without touching the network.
+- The concurrent-claim test uses a batch smaller than the monitor count, so
+  both workers get work and any overlap would be visible.
+- Added a guard that refuses to run tests against a non-test database.
