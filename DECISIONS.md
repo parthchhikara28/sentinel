@@ -47,3 +47,13 @@
 - Locked the monitor row (FOR UPDATE) while updating the failure counter so
   concurrent results cannot lose an increment.
 - ALLOW_PRIVATE_URLS is a development-only escape hatch for local webhook tests.
+
+## Part 10 - rate limiting, caching, stats
+- Rate limit is per user (not per IP) because users share IPs behind NAT.
+  Implemented as a fixed window using an atomic Lua script so the counter
+  and its expiry can never get out of sync. Known limit: a fixed window allows
+  a 2x burst at the window boundary; a sliding window or token bucket would fix it.
+- Cached only the stats endpoint: it aggregates many rows to return a small
+  answer and tolerates 30s of staleness. The cache key includes every input
+  (monitor id and hours).
+- Reported p95 latency alongside the average because averages hide slow tails.
