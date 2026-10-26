@@ -1,8 +1,12 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.config import settings
+from app.core.ratelimit import rate_limit
+from app.core.redis import redis
 from app.core.urls import assert_public_url
 from app.db.base import get_session
 from app.db.models import CheckResult, Incident, Monitor, User
@@ -37,7 +41,7 @@ async def _get_owned(
 @router.post("", response_model=MonitorOut, status_code=status.HTTP_201_CREATED)
 async def create_monitor(
     payload: MonitorCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(rate_limit),
     session: AsyncSession = Depends(get_session),
 ) -> Monitor:
     try:
@@ -65,7 +69,7 @@ async def create_monitor(
 async def list_monitors(
     limit: int = Query(default=50, ge=1, le=100),
     cursor: int | None = Query(default=None, description="last id from previous page"),
-    user: User = Depends(get_current_user),
+    user: User = Depends(rate_limit),
     session: AsyncSession = Depends(get_session),
 ) -> MonitorPage:
     stmt = select(Monitor).where(Monitor.user_id == user.id)
@@ -85,7 +89,7 @@ async def list_monitors(
 @router.get("/{monitor_id}", response_model=MonitorOut)
 async def get_monitor(
     monitor_id: int,
-    user: User = Depends(get_current_user),
+    user: User = Depends(rate_limit),
     session: AsyncSession = Depends(get_session),
 ) -> Monitor:
     return await _get_owned(monitor_id, user, session)
@@ -95,7 +99,7 @@ async def get_monitor(
 async def update_monitor(
     monitor_id: int,
     payload: MonitorUpdate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(rate_limit),
     session: AsyncSession = Depends(get_session),
 ) -> Monitor:
     monitor = await _get_owned(monitor_id, user, session)
@@ -112,7 +116,7 @@ async def update_monitor(
 @router.delete("/{monitor_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_monitor(
     monitor_id: int,
-    user: User = Depends(get_current_user),
+    user: User = Depends(rate_limit),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     monitor = await _get_owned(monitor_id, user, session)
@@ -125,7 +129,7 @@ async def list_checks(
     monitor_id: int,
     limit: int = Query(default=50, ge=1, le=200),
     cursor: int | None = Query(default=None),
-    user: User = Depends(get_current_user),
+    user: User = Depends(rate_limit),
     session: AsyncSession = Depends(get_session),
 ) -> CheckResultPage:
     await _get_owned(monitor_id, user, session)
@@ -147,7 +151,7 @@ async def list_checks(
 async def list_incidents(
     monitor_id: int,
     limit: int = Query(default=20, ge=1, le=100),
-    user: User = Depends(get_current_user),
+    user: User = Depends(rate_limit),
     session: AsyncSession = Depends(get_session),
 ) -> list[Incident]:
     await _get_owned(monitor_id, user, session)
@@ -158,3 +162,62 @@ async def list_incidents(
         .limit(limit)
     )
     return list(rows.scalars())
+
+
+STATS_SQL = text("""
+SELECT
+    count(*)                                   AS total_checks,
+    count(*) FILTER (WHERE ok)                 AS ok_checks,
+    avg(latency_ms) FILTER (WHERE ok)          AS avg_latency_ms,
+    percentile_disc(0.95) WITHIN GROUP (ORDER BY latency_ms)
+        FILTER (WHERE ok)                      AS p95_latency_ms,
+    max(checked_at)                            AS last_checked_at
+FROM check_results
+WHERE monitor_id = :monitor_id
+  AND checked_at > NOW() - (:hours * INTERVAL '1 hour')
+""")
+
+
+@router.get("/{monitor_id}/stats")
+async def monitor_stats(
+    monitor_id: int,
+    hours: int = Query(default=24, ge=1, le=720),
+    user: User = Depends(rate_limit),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    await _get_owned(monitor_id, user, session)
+
+    cache_key = f"stats:{monitor_id}:{hours}"
+    cached = await redis.get(cache_key)
+    if cached:
+        payload = json.loads(cached)
+        payload["cached"] = True
+        return payload
+
+    row = (
+        await session.execute(
+            STATS_SQL, {"monitor_id": monitor_id, "hours": hours}
+        )
+    ).mappings().one()
+
+    total = row["total_checks"] or 0
+    payload = {
+        "monitor_id": monitor_id,
+        "window_hours": hours,
+        "total_checks": total,
+        "uptime_percent": round(100 * (row["ok_checks"] or 0) / total, 3)
+        if total
+        else None,
+        "avg_latency_ms": round(float(row["avg_latency_ms"]), 1)
+        if row["avg_latency_ms"] is not None
+        else None,
+        "p95_latency_ms": row["p95_latency_ms"],
+        "last_checked_at": row["last_checked_at"].isoformat()
+        if row["last_checked_at"]
+        else None,
+        "cached": False,
+    }
+    await redis.setex(
+        cache_key, settings.stats_cache_ttl_seconds, json.dumps(payload)
+    )
+    return payload
