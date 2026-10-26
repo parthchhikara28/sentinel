@@ -24,7 +24,7 @@ async def assert_public_url(url: str) -> None:
     try:
         addresses = await asyncio.to_thread(_resolve, parsed.hostname)
     except socket.gaierror:
-        raise ValueError("hostname does not resolve")
+        raise ValueError("hostname does not resolve") from None
 
     for address in addresses:
         ip = ipaddress.ip_address(address)

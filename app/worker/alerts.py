@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import random
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from sqlalchemy import select
@@ -67,7 +67,7 @@ async def record_result(
             if outcome.ok:
                 row.consecutive_failures = 0
                 if open_incident is not None:
-                    open_incident.resolved_at = datetime.now(timezone.utc)
+                    open_incident.resolved_at = datetime.now(UTC)
                     alert = {
                         "event": "recovered",
                         "monitor_id": row.id,

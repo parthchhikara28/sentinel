@@ -74,7 +74,7 @@ async def main() -> None:
             )
             try:
                 await asyncio.wait_for(_shutdown.wait(), timeout=delay)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
         log.info("worker stopped cleanly")
 

@@ -18,9 +18,7 @@ async def perform_check(client: httpx.AsyncClient, monitor: dict) -> CheckOutcom
     error: str | None = None
 
     try:
-        response = await client.get(
-            monitor["url"], timeout=monitor["timeout_seconds"]
-        )
+        response = await client.get(monitor["url"], timeout=monitor["timeout_seconds"])
         status_code = response.status_code
         ok = status_code == monitor["expected_status"]
         if not ok:

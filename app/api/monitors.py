@@ -23,14 +23,10 @@ from app.schemas.monitor import (
 router = APIRouter(prefix="/v1/monitors", tags=["monitors"])
 
 
-async def _get_owned(
-    monitor_id: int, user: User, session: AsyncSession
-) -> Monitor:
+async def _get_owned(monitor_id: int, user: User, session: AsyncSession) -> Monitor:
     monitor = (
         await session.execute(
-            select(Monitor).where(
-                Monitor.id == monitor_id, Monitor.user_id == user.id
-            )
+            select(Monitor).where(Monitor.id == monitor_id, Monitor.user_id == user.id)
         )
     ).scalar_one_or_none()
     if monitor is None:
@@ -47,7 +43,7 @@ async def create_monitor(
     try:
         await assert_public_url(str(payload.url))
     except ValueError as exc:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
 
     monitor = Monitor(
         user_id=user.id,
@@ -195,10 +191,10 @@ async def monitor_stats(
         return payload
 
     row = (
-        await session.execute(
-            STATS_SQL, {"monitor_id": monitor_id, "hours": hours}
-        )
-    ).mappings().one()
+        (await session.execute(STATS_SQL, {"monitor_id": monitor_id, "hours": hours}))
+        .mappings()
+        .one()
+    )
 
     total = row["total_checks"] or 0
     payload = {
@@ -217,7 +213,5 @@ async def monitor_stats(
         else None,
         "cached": False,
     }
-    await redis.setex(
-        cache_key, settings.stats_cache_ttl_seconds, json.dumps(payload)
-    )
+    await redis.setex(cache_key, settings.stats_cache_ttl_seconds, json.dumps(payload))
     return payload

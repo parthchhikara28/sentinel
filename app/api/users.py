@@ -23,7 +23,9 @@ async def create_user(
         await session.commit()
     except IntegrityError:
         await session.rollback()
-        raise HTTPException(status.HTTP_409_CONFLICT, "Email already registered")
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Email already registered"
+        ) from None
     await session.refresh(user)
     return UserCreated(
         id=user.id, email=user.email, created_at=user.created_at, api_key=api_key

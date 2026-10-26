@@ -21,9 +21,7 @@ return 1
 _limiter = redis.register_script(_SCRIPT)
 
 
-async def rate_limit(
-    request: Request, user: User = Depends(get_current_user)
-) -> User:
+async def rate_limit(request: Request, user: User = Depends(get_current_user)) -> User:
     key = f"ratelimit:{user.id}"
     allowed = await _limiter(
         keys=[key],
