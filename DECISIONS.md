@@ -30,3 +30,9 @@
 - Used cursor pagination (fetch limit+1) instead of OFFSET so deep pages stay
   fast and inserts mid-pagination do not cause skips or duplicates.
 - DELETE is a soft delete (is_active=false) to keep check history.
+
+### Part 8.7 - concurrency experiment
+- Ran two workers with fast polling (0.05s) against the same monitors.
+- Without FOR UPDATE SKIP LOCKED: monitors were checked more than once in the
+  same second (duplicate work).
+- With the clause restored and identical conditions: zero duplicates.
