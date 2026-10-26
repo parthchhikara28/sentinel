@@ -36,3 +36,14 @@
 - Without FOR UPDATE SKIP LOCKED: monitors were checked more than once in the
   same second (duplicate work).
 - With the clause restored and identical conditions: zero duplicates.
+
+## Part 9 - incidents and webhooks
+- Alert after N consecutive failures (debouncing) and only when no incident
+  is already open (idempotency), so one outage sends exactly one "down" alert.
+- Webhook is sent AFTER the transaction commits; never hold a database lock
+  across a call to a third party.
+- Retries use exponential backoff plus jitter, and 4xx responses are not
+  retried because the request itself is wrong.
+- Locked the monitor row (FOR UPDATE) while updating the failure counter so
+  concurrent results cannot lose an increment.
+- ALLOW_PRIVATE_URLS is a development-only escape hatch for local webhook tests.
