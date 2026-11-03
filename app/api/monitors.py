@@ -61,6 +61,15 @@ async def create_monitor(
     return monitor
 
 
+LATEST_PER_MONITOR = text("""
+SELECT DISTINCT ON (monitor_id)
+       monitor_id, ok, status_code, latency_ms, checked_at
+FROM check_results
+WHERE monitor_id = ANY(:ids)
+ORDER BY monitor_id, checked_at DESC
+""")
+
+
 @router.get("", response_model=MonitorPage)
 async def list_monitors(
     limit: int = Query(default=50, ge=1, le=100),
@@ -76,8 +85,25 @@ async def list_monitors(
     rows = list((await session.execute(stmt)).scalars())
     has_more = len(rows) > limit
     rows = rows[:limit]
+
+    latest: dict[int, dict] = {}
+    if rows:
+        result = await session.execute(
+            LATEST_PER_MONITOR, {"ids": [m.id for m in rows]}
+        )
+        latest = {r["monitor_id"]: dict(r) for r in result.mappings().all()}
+
+    items = []
+    for monitor in rows:
+        item = MonitorOut.model_validate(monitor)
+        status = latest.get(monitor.id)
+        if status is not None:
+            status["checked_at"] = status["checked_at"].isoformat()
+            item.latest_status = status
+        items.append(item)
+
     return MonitorPage(
-        items=[MonitorOut.model_validate(r) for r in rows],
+        items=items,
         next_cursor=rows[-1].id if has_more and rows else None,
     )
 

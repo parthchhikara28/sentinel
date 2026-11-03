@@ -1,0 +1,24 @@
+                                                                QUERY PLAN                                                                
+------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=7317.32..7323.16 rows=50 width=47) (actual time=23.604..27.247 rows=50 loops=1)
+   Buffers: shared hit=3784
+   ->  Gather Merge  (cost=7317.32..7327.12 rows=84 width=47) (actual time=23.603..27.237 rows=50 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=3784
+         ->  Sort  (cost=6317.30..6317.40 rows=42 width=47) (actual time=20.188..20.191 rows=17 loops=3)
+               Sort Key: id DESC
+               Sort Method: quicksort  Memory: 32kB
+               Buffers: shared hit=3784
+               Worker 0:  Sort Method: quicksort  Memory: 25kB
+               Worker 1:  Sort Method: quicksort  Memory: 25kB
+               ->  Parallel Seq Scan on check_results  (cost=0.00..6316.17 rows=42 width=47) (actual time=12.593..20.100 rows=33 loops=3)
+                     Filter: (monitor_id = 42)
+                     Rows Removed by Filter: 166633
+                     Buffers: shared hit=3712
+ Planning:
+   Buffers: shared hit=79
+ Planning Time: 0.431 ms
+ Execution Time: 27.340 ms
+(20 rows)
+

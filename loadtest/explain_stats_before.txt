@@ -1,0 +1,18 @@
+                                                            QUERY PLAN                                                             
+-----------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=8889.42..8889.43 rows=1 width=20) (actual time=20.047..23.754 rows=1 loops=1)
+   Buffers: shared hit=3719
+   ->  Gather  (cost=1000.00..8888.67 rows=100 width=5) (actual time=0.566..23.681 rows=100 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=3712
+         ->  Parallel Seq Scan on check_results  (cost=0.00..7878.67 rows=42 width=5) (actual time=10.762..17.186 rows=33 loops=3)
+               Filter: ((monitor_id = 42) AND (checked_at > (now() - '24:00:00'::interval)))
+               Rows Removed by Filter: 166633
+               Buffers: shared hit=3712
+ Planning:
+   Buffers: shared hit=78
+ Planning Time: 0.382 ms
+ Execution Time: 23.801 ms
+(14 rows)
+

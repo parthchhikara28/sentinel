@@ -7,3 +7,6 @@ __pycache__/
 htmlcov/
 *.pdf
 .DS_Store
+loadtest/*_history.csv
+loadtest/*_failures.csv
+loadtest/*_exceptions.csv

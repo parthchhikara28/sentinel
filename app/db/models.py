@@ -77,8 +77,11 @@ class CheckResult(Base):
 
 # Deliberately NOT created yet. You will add this in Part 13 and measure the
 # difference it makes. Leave it commented out.
-# Index("ix_check_results_monitor_time",
-#       CheckResult.monitor_id, CheckResult.checked_at.desc())
+Index(
+    "ix_check_results_monitor_time",
+    CheckResult.monitor_id,
+    CheckResult.checked_at.desc(),
+)
 
 
 class Incident(Base):

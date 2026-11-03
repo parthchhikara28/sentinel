@@ -38,6 +38,7 @@ class MonitorOut(BaseModel):
     consecutive_failures: int
     next_check_at: datetime
     created_at: datetime
+    latest_status: dict | None = None
 
 
 class MonitorPage(BaseModel):

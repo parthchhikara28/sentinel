@@ -1,0 +1,13 @@
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=182.68..182.69 rows=1 width=20) (actual time=0.082..0.082 rows=1 loops=1)
+   Buffers: shared hit=13
+   ->  Index Scan using ix_check_results_monitor_time on check_results  (cost=0.43..181.93 rows=100 width=5) (actual time=0.017..0.033 rows=100 loops=1)
+         Index Cond: ((monitor_id = 42) AND (checked_at > (now() - '24:00:00'::interval)))
+         Buffers: shared hit=6
+ Planning:
+   Buffers: shared hit=102
+ Planning Time: 0.346 ms
+ Execution Time: 0.126 ms
+(9 rows)
+
