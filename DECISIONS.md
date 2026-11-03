@@ -69,3 +69,15 @@
 - The concurrent-claim test uses a batch smaller than the monitor count, so
   both workers get work and any overlap would be visible.
 - Added a guard that refuses to run tests against a non-test database.
+
+## Part 14 - Docker
+- Dockerfile copies requirements.txt before the code so dependency layers are
+  cached; runs as a non-root user; PYTHONUNBUFFERED so logs appear immediately.
+- Compose runs api + 2 worker replicas, so the SKIP LOCKED claiming is
+  exercised on every startup. Workers wait for the API healthcheck, which only
+  passes after migrations have run.
+- Migrations run in the API start command: simple for one API replica.
+  Limitation: several API replicas starting together could race; a one-shot
+  migration job would fix that.
+- Secrets live in compose environment / platform secrets, never in the image
+  (.env is in .dockerignore).
